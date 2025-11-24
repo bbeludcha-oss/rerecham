@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>年末ジャンボ宝くじシミュレーター 2024</title>
+<style>
+  :root {
+    --bg:#f7f7f7; --panel:#fff; --line:#cfcfcf; --muted:#666;
+    --green:#28a745; --red:#d9534f; --yellow:#ffc107; --blue:#0275d8;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; background: var(--bg); color:#222; }
+  header { padding: 16px 20px; border-bottom:1px solid var(--line); background:var(--panel); }
+  header h1 { margin:0 0 4px; font-size: 20px; }
+  header p { margin:0; color:var(--muted); font-size: 13px; }
+
+  .container { max-width: 1100px; margin: 18px auto; padding: 0 16px; }
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
+
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: 1.2fr 2fr; }
+  }
+
+  button, .radio { cursor: pointer; }
+  button { padding: 8px 14px; border-radius: 8px; border:1px solid var(--line); background:#fafafa; font-size:14px; }
+  button.primary { background:var(--blue); color:#fff; border-color:transparent; }
+  button.warn { background:var(--red); color:#fff; border-color:transparent; }
+
+  .speed { display:flex; gap:10px; align-items:center; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#fafafa; }
+  .speed label { display:flex; align-items:center; gap:4px; font-size:14px; }
+
+  .board { display:grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) {
+    .board { grid-template-columns: 1.2fr 2fr; }
+  }
+
+  .purchase-box { padding: 12px; border: 2px solid #2aa19833; background:#fdfdfd; border-radius: 8px; }
+  .purchase-title { font-weight: 700; color:#0b7285; margin-bottom:6px; }
+  .purchase-current { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 18px; }
+
+  .summary { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .summary .box { border: 2px solid var(--line); border-radius: 8px; padding: 8px; text-align:center; }
+  .summary .money { font-size: 22px; font-weight:700; }
+  .summary .box.buy { border-color:#4dabf733; }
+  .summary .box.win { border-color:#37b24d33; }
+  .summary .box.profit { border-color:#e0313133; }
+  .summary small { display:block; color:var(--muted); }
+
+  .meta { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:8px; }
+  .meta .cell { border:1px dashed var(--line); border-radius:8px; padding:8px; text-align:center; font-size:13px; background:#fafafa; }
+
+  table { width:100%; border-collapse: collapse; background:var(--panel); }
+  th, td { border:1px solid var(--line); padding: 8px 10px; text-align:left; }
+  th { background:#f0f3f7; font-weight: 700; }
+  td.num { text-align:right; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .rank { width: 160px; white-space: nowrap; }
+  .latest { color:#0b7285; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .footline { margin-top: 8px; color:var(--muted); font-size: 12px; }
+  .note { margin-top: 8px; font-size:12px; color:#a00; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>年末ジャンボ宝くじシミュレーター[まいちゃん天才]</h1>
+    <p>バラ買い（100000枚セット）で当たり・収支を自動シミュレーション。ページを開くと自動で動作します。ユニットは無視。</p>
+  </header>
+
+  <div class="container">
+    <div class="controls card" style="justify-content: space-between;">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="toggle" class="primary">停止</button>
+        <div class="speed" role="group" aria-label="速度">
+          <label><input type="radio" name="spd" value="slow"> 遅</label>
+          <label><input type="radio" name="spd" value="mid" checked> 並</label>
+          <label><input type="radio" name="spd" value="fast"> 速</label>
+        </div>
+        <button id="reset" class="warn">リセット</button>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="card">
+        <div class="purchase-box">
+          <div class="purchase-title">★購入くじ番号★</div>
+          <div class="purchase-current"><span id="currentKumi">---</span>組 - <span id="currentRange">------</span> 帯</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="summary">
+          <div class="box buy">
+            <div>購入金額（合計）</div>
+            <div class="money" id="sumBuy">0 円</div>
+            <small>購入枚数合計：<span id="sumBuyCount">0</span> 枚</small>
+          </div>
+          <div class="box win">
+            <div>当選金額（合計）</div>
+            <div class="money" id="sumWin">0 円</div>
+            <small>当選枚数合計：<span id="sumWinCount">0</span> 枚</small>
+          </div>
+          <div class="box profit">
+            <div>収支（合計）</div>
+            <div class="money" id="sumProfit">0 円</div>
+            <small>回収率：<span id="rateReturn">0.00</span> % ／ 当選率：<span id="rateHit">0.00</span> %</small>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="cell">1セット：100000枚（バラ）まいちゃん暴走</div>
+          <div class="cell">1枚：300円</div>
+          <div class="cell">最高等級のみ加算</div>
+          <div class="cell">当せん番号：2024年想定（編集可）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th class="rank">等級／当せん金額</th>
+            <th>等級条件</th>
+            <th>最新の当せんくじ</th>
+            <th class="num">当せん枚数</th>
+            <th class="num">当せん金額</th>
+            <th class="num">当せん率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-key="1">
+            <th>1等（7億円）</th>
+            <td>指定組＆6桁一致</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="1zen">
+            <th>1等の前後賞（1億5千万円）</th>
+            <td>1等の番号±1（同組）</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="1kumi">
+            <th>1等の組違い（10万円）</th>
+            <td>1等と同番号・組違い</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="2">
+            <th>2等（1000万円）</th>
+            <td>指定組＆6桁一致（複数あり）</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="3">
+            <th>3等（100万円）</th>
+            <td>各組共通・6桁一致（複数）</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="4">
+            <th>4等（5万円）</th>
+            <td>各組共通・下4桁一致</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="5">
+            <th>5等（1万円）</th>
+            <td>各組共通・下3桁一致</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="6">
+            <th>6等（3,000円）</th>
+            <td>各組共通・下2桁一致</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+          <tr data-key="7">
+            <th>7等（300円）</th>
+            <td>各組共通・下1桁一致</td>
+            <td class="latest" data-latest></td>
+            <td class="num" data-count>0</td>
+            <td class="num" data-amount>0</td>
+            <td class="num" data-rate>0%</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="footline" id="footline">1セット＝10枚購入中…</div>
+      <div class="note">※当せん番号は <strong>config.winning</strong> を編集してください（2024年年末ジャンボの正式番号を貼り付け）。本コードは見た目・動作を再現し、番号は差し替え前提です。</div>
+    </div>
+  </div>
+
+<script>
+// ======= 設定（ここを書き換えるだけで別年にも対応） =======
+const config = {
+  ticketPrice: 300,
+  kumiMax: 200,              // 組は 001〜200 を想定（必要なら変更）
+  setSize: 1000000,               // バラ100000枚
+  // ★当せん番号（2024年/第1031回）— 実番号を貼り付けてください ★
+  // 例はダミー or スクショ読取の一部。正式番号に必ず差し替えてください！
+  winning: {
+    one:      [{ kumi: 110, num: 106348 }],                // 1等
+    two:      [
+      // { kumi: 60,  num: 122015 }, { kumi: 46, num: 118658 }, ...
+    ],
+    three:    [103265, 164169],                             // 各組共通・6桁一致
+    fourLast: [6135],                                       // 下4桁
+    fiveLast: [986],                                        // 下3桁
+    sixLast:  [64],                                         // 下2桁
+    sevenLast:[6],                                          // 下1桁
+  },
+  prize: {
+    one: 700_000_000,
+    onePrevNext: 150_000_000,
+    oneKumi: 100_000,
+    two: 10_000_000,
+    three: 1_000_000,
+    four: 50_000,
+    five: 10_000,
+    six: 3_000,
+    seven: 300,
+  }
+};
+
+// ======= 状態 =======
+let running = true;
+let speed = 'mid'; // slow/mid/fast
+let sumBuy = 0, sumBuyCount = 0, sumWin = 0, sumWinCount = 0;
+const perRank = {
+  one:{count:0, amount:0, latest:''},
+  onePrevNext:{count:0, amount:0, latest:''},
+  oneKumi:{count:0, amount:0, latest:''},
+  two:{count:0, amount:0, latest:''},
+  three:{count:0, amount:0, latest:''},
+  four:{count:0, amount:0, latest:''},
+  five:{count:0, amount:0, latest:''},
+  six:{count:0, amount:0, latest:''},
+  seven:{count:0, amount:0, latest:''},
+};
+
+// ======= ユーティリティ =======
+const rnd = (min, max)=> Math.floor(Math.random()*(max-min+1))+min;
+const pad = (n, len)=> String(n).padStart(len, '0');
+const yen = n => n.toLocaleString('ja-JP')+ ' 円';
+
+function makeBara10() {
+  // 5桁プレフィックスを作り、末尾0〜9を割り当て（6桁番号）
+  const prefix = rnd(0, 99999); // 00000〜99999
+  const tickets = [];
+  for (let d=0; d<config.setSize; d++) {
+    const num = prefix*10 + d; // 末尾0〜9
+    const kumi = rnd(1, config.kumiMax);
+    tickets.push({ kumi, num });
+  }
+  return tickets;
+}
+
+function bestPrizeFor(ticket) {
+  const {kumi, num} = ticket;
+  // 1等（最優先）
+  for (const w of config.winning.one) {
+    if (w.kumi === kumi && w.num === num) return {key:'one', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  }
+  // 1等前後賞
+  for (const w of config.winning.one) {
+    if (w.kumi === kumi && (w.num+1 === num || w.num-1 === num)) return {key:'onePrevNext', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  }
+  // 1等組違い
+  for (const w of config.winning.one) {
+    if (w.num === num && w.kumi !== kumi) return {key:'oneKumi', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  }
+  // 2等
+  for (const w of config.winning.two) {
+    if (w.kumi === kumi && w.num === num) return {key:'two', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  }
+  // 3等（各組共通・6桁一致）
+  if (config.winning.three.includes(num)) return {key:'three', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  // 4等〜7等：下n桁一致
+  const last4 = num % 10000; if (config.winning.fourLast.includes(last4)) return {key:'four', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  const last3 = num % 1000;  if (config.winning.fiveLast.includes(last3)) return {key:'five', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  const last2 = num % 100;   if (config.winning.sixLast.includes(last2)) return {key:'six', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+  const last1 = num % 10;    if (config.winning.sevenLast.includes(last1)) return {key:'seven', label:`${pad(kumi,3)}組 ${pad(num,6)}番`};
+
+  return null; // ハズレ
+}
+
+function updateSummary() {
+  const sumProfit = sumWin - sumBuy;
+  document.getElementById('sumBuy').textContent = yen(sumBuy);
+  document.getElementById('sumWin').textContent = yen(sumWin);
+  document.getElementById('sumProfit').textContent = yen(sumProfit);
+  document.getElementById('sumBuyCount').textContent = sumBuyCount;
+  document.getElementById('sumWinCount').textContent = sumWinCount;
+  const ret = sumBuy ? (sumWin/sumBuy*100) : 0;
+  const hit = sumBuyCount ? (sumWinCount/sumBuyCount*100) : 0;
+  document.getElementById('rateReturn').textContent = ret.toFixed(2);
+  document.getElementById('rateHit').textContent = hit.toFixed(2);
+}
+
+function updateTable() {
+  const tbody = document.querySelector('#resultTable tbody');
+  const map = {
+    '1': 'one', '1zen': 'onePrevNext', '1kumi': 'oneKumi', '2':'two','3':'three','4':'four','5':'five','6':'six','7':'seven'
+  };
+  [...tbody.querySelectorAll('tr')].forEach(tr=>{
+    const key = map[tr.getAttribute('data-key')];
+    tr.querySelector('[data-latest]').textContent = perRank[key].latest;
+    tr.querySelector('[data-count]').textContent = perRank[key].count.toLocaleString('ja-JP');
+    tr.querySelector('[data-amount]').textContent = perRank[key].amount.toLocaleString('ja-JP');
+    const rate = sumBuyCount ? (perRank[key].count / sumBuyCount * 100) : 0;
+    tr.querySelector('[data-rate]').textContent = rate.toFixed(4) + '%';
+  });
+}
+
+function tickOneSet() {
+  const tickets = makeBara10();
+  // 表示用：直近の帯（例：008組-165425 帯 風の表示）
+  const sample = tickets[0];
+  document.getElementById('currentKumi').textContent = pad(sample.kumi,3);
+  document.getElementById('currentRange').textContent = pad(Math.floor(sample.num/10)*10,6) + '〜' + pad(Math.floor(sample.num/10)*10 + 9,6);
+
+  sumBuy += config.ticketPrice * tickets.length;
+  sumBuyCount += tickets.length;
+
+  for (const t of tickets) {
+    const hit = bestPrizeFor(t);
+    if (!hit) continue;
+
+    // 当たった場合：最高等級のみカウントなので、その等級のみに加算
+    const key = hit.key; const amount = config.prize[key];
+    perRank[key].count += 1;
+    perRank[key].amount += amount;
+    perRank[key].latest = hit.label;
+    sumWin += amount; sumWinCount += 1;
+  }
+
+  updateSummary();
+  updateTable();
+  document.getElementById('footline').textContent = `ここまでの購入金額/枚数 — ${yen(sumBuy)} / ${sumBuyCount.toLocaleString('ja-JP')} 枚`;
+}
+
+let timer = null;
+function loopStart() {
+  if (timer) clearInterval(timer);
+  const interval = speed === 'slow' ? 700 : speed === 'mid' ? 200 : 40;
+  timer = setInterval(()=>{ if (running) tickOneSet(); }, interval);
+}
+
+function resetAll() {
+  running = true; speed = 'mid';
+  sumBuy = 0; sumBuyCount = 0; sumWin = 0; sumWinCount = 0;
+  for (const k in perRank) perRank[k] = {count:0, amount:0, latest:''};
+  document.querySelector('input[name="spd"][value="mid"]').checked = true;
+  document.getElementById('toggle').textContent = '停止';
+  updateSummary(); updateTable();
+  document.getElementById('currentKumi').textContent = '---';
+  document.getElementById('currentRange').textContent = '------';
+  document.getElementById('footline').textContent = '1セット＝10枚購入中…';
+}
+
+// ======= イベント =======
+(document.getElementById('toggle')).addEventListener('click', ()=>{
+  running = !running; document.getElementById('toggle').textContent = running ? '停止' : '再開';
+});
+[...document.querySelectorAll('input[name="spd"]')].forEach(r=>{
+  r.addEventListener('change', ()=>{ speed = r.value; loopStart(); });
+});
+(document.getElementById('reset')).addEventListener('click', ()=>{ resetAll(); });
+
+// ======= 起動 =======
+updateSummary(); updateTable();
+loopStart();
+</script>
+</body>
+</html>
