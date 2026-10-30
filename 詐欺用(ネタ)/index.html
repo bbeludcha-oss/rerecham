@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI Trader - 次世代自動売買プラットフォーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- 【画面1】会員登録フォーム -->
+        <div id="registerSection" class="card">
+            <h2>NEXUS AI TRADER</h2>
+            <p class="subtitle">次世代AI自動運用システム 会員登録</p>
+            <form id="registerForm">
+                <div class="form-group name-group">
+                    <div>
+                        <label for="lastName">姓</label>
+                        <input type="text" id="lastName" placeholder="山田" required>
+                    </div>
+                    <div>
+                        <label for="firstName">名</label>
+                        <input type="text" id="firstName" placeholder="太郎" required>
+                    </div>
+                </div>
+
+                <div class="form-group name-group">
+                    <div>
+                        <label for="lastKana">ふりがな（姓）</label>
+                        <input type="text" id="lastKana" placeholder="やまだ" required>
+                    </div>
+                    <div>
+                        <label for="firstKana">ふりがな（名）</label>
+                        <input type="text" id="firstKana" placeholder="たろう" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">住所</label>
+                    <input type="text" id="address" placeholder="東京都渋谷区1-2-3" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">メールアドレス</label>
+                    <input type="email" id="email" placeholder="example@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tel">電話番号（ハイフンなし）</label>
+                    <input type="tel" id="tel" placeholder="09012345678" required>
+                </div>
+
+                <button type="submit" class="primary-btn">次へ（確認メール送信）</button>
+            </form>
+        </div>
+
+        <!-- 【画面2】メール認証画面 -->
+        <div id="verifySection" class="card hidden">
+            <h2>メール認証</h2>
+            <p class="notice-text"><span id="userEmailDisplay"></span> 宛に確認メールを送信しました。</p>
+            
+            <div class="gmail-box">
+                <div class="gmail-header">
+                    <span class="gmail-from">From: Nexus Security &lt;no-reply@nexus-trader.io&gt;</span>
+                    <span class="gmail-subject">【Nexus】ご登録確認の認証コード</span>
+                </div>
+                <div class="gmail-body">
+                    <p>自動運用システムの利用を開始するには、以下の4桁のコードを入力してください。</p>
+                    <div class="pin-display" id="sentPinBox">----</div>
+                </div>
+            </div>
+
+            <form id="verifyForm">
+                <div class="form-group">
+                    <label for="pinCode">4桁の認証コード</label>
+                    <input type="text" id="pinCode" placeholder="例: 5821" maxlength="4" required>
+                </div>
+                <button type="submit" class="primary-btn">認証してダッシュボードへ</button>
+                <button type="button" id="backButton" class="secondary-btn">内容を修正する</button>
+            </form>
+        </div>
+
+        <!-- 【画面3】AIトレード ダッシュボード -->
+        <div id="aiDashboardSection" class="card wide-card hidden">
+            <div class="dashboard-header">
+                <h2>📈 NEXUS TERMINAL <span class="live-badge">LIVE AI</span></h2>
+                <div class="user-status-info">
+                    <span id="displayUserName"></span> 様 | 登録tel: <span id="displayUserTel"></span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- 左側：資産・収益エリア -->
+                <div class="dash-col">
+                    <div class="balance-card">
+                        <span class="balance-label">総資産残高 (USD)</span>
+                        <span class="balance-amount" id="balanceAmount">$0.00</span>
+                        <span class="profit-indicator" id="profitIndicator">+ $0.00 (0.0%)</span>
+                    </div>
+
+                    <div class="ai-status-box">
+                        <div class="status-header">AIオートパイロット: <span id="aiStatusText" class="status-waiting">待機中 (要入金)</span></div>
+                        <p class="status-text" id="aiStatusDesc">最小入金額 ($250~) を入金すると、高精度AIアルゴリズムによる自動売買が開始されます。</p>
+                        <button type="button" id="openDepositModalBtn" class="deposit-action-btn">💳 資金を入金する ($250〜)</button>
+                    </div>
+                </div>
+
+                <!-- 右側：リアルタイムAIトレードログ -->
+                <div class="dash-col">
+                    <div class="market-box">
+                        <div class="market-title">リアルタイム市場監視 & AI売買シグナル</div>
+                        <div class="trade-log-container" id="tradeLogContainer">
+                            <div class="log-item">[System] システム初期化完了。AIモデル v4.2 稼働中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="logoutBtn" class="danger-btn">ログアウト</button>
+        </div>
+
+        <!-- 【画面4】クレジットカード決済モーダル -->
+        <div id="depositModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3>💳 クレジットカード決済 (安全な暗号化通信)</h3>
+                <p class="modal-desc">AI運用を開始するための証拠金を入金します（最低 <strong>$250</strong> 以上）</p>
+
+                <form id="paymentForm">
+                    <div class="form-group">
+                        <label for="depositAmount">入金額 (USD) *最低 $250</label>
+                        <input type="number" id="depositAmount" value="500" min="250" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardName">カード名義人 (ローマ字)</label>
+                        <input type="text" id="cardName" placeholder="TARO YAMADA" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardNumber">クレジットカード番号</label>
+                        <input type="text" id="cardNumber" placeholder="4000 1234 5678 9010" maxlength="19" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardExpiry">有効期限 (MM/YY)</label>
+                            <input type="text" id="cardExpiry" placeholder="12/28" maxlength="5" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardCvc">セキュリティコード (CVC)</label>
+                            <input type="password" id="cardCvc" placeholder="123" maxlength="4" required>
+                        </div>
+                    </div>
+
+                    <div class="modal-buttons">
+                        <button type="submit" class="primary-btn">決済を実行する</button>
+                        <button type="button" id="closeModalBtn" class="secondary-btn">キャンセル</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- SMS通知ポップアップ通知（スマホの通知風） -->
+        <div id="smsNotification" class="sms-notification hidden">
+            <div class="sms-icon">💬</div>
+            <div class="sms-content">
+                <div class="sms-sender">SMSメッセージ (登録電話番号宛)</div>
+                <div class="sms-text" id="smsTextMessage">決済が完了しました。</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
